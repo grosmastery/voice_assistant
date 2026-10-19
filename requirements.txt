@@ -1,0 +1,10 @@
+faster-whisper
+sounddevice
+numpy
+openwakeword
+webrtcvad-wheels
+rapidfuzz
+pyyaml
+piper-tts
+rich
+psutil

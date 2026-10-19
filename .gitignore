@@ -1,0 +1,21 @@
+# середовище і кеші
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# особисті налаштування
+config.yaml
+
+# моделі (великі, мають свої ліцензії)
+models/
+*.onnx
+*.tflite
+*.ppn
+
+# IDE і логи
+.vscode/
+.idea/
+*.log
