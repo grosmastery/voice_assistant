@@ -1,4 +1,4 @@
-# середовище і кеші
+# environment and caches
 .venv/
 venv/
 env/
@@ -6,16 +6,16 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# особисті налаштування
+# personal settings
 config.yaml
 
-# моделі (великі, мають свої ліцензії)
+# models (large, have their own licenses)
 models/
 *.onnx
 *.tflite
 *.ppn
 
-# IDE і логи
+# IDE and logs
 .vscode/
 .idea/
 *.log
