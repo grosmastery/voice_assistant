@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import os
+import winsound
+from datetime import datetime
+
 import numpy as np
 import yaml
 
@@ -14,10 +18,13 @@ from tts.piper_tts import Speaker
 WAKE_MODEL = "alexa"
 WAKE_NAME = "Alexa"       # name shown in the UI
 MIN_PEAK = 0.02           # recordings quieter than this count as silence
+UNRECOGNIZED_LOG = os.path.join("logs", "unrecognized.log")
 
 # Media replies are only printed, not spoken (unless speak_media is on)
 SILENT_REPLIES = {"Paused", "Playing", "Next track", "Previous track",
                   "Volume up", "Volume down", "Muted", "Unmuted"}
+# Replies with these prefixes are never spoken (dictation would read the text back)
+CONSOLE_ONLY = ("Typed: ",)
 
 
 def load_config(path: str = "config.yaml") -> dict:
@@ -39,21 +46,52 @@ def build_speaker(cfg: dict) -> Speaker | None:
     return speaker
 
 
+def build_stt(cfg: dict) -> WhisperSTT:
+    s = cfg.get("stt", {})
+    return WhisperSTT(
+        model_size=s.get("model", "large-v3-turbo"),
+        device=s.get("device", "auto"),
+        compute_type=s.get("compute_type", "float16"),
+        cpu_model=s.get("cpu_model", "small"),
+        beam_size=s.get("beam_size", 5),
+        vad_filter=s.get("vad_filter", False),
+    )
+
+
+def log_unrecognized(text: str, lang: str, path: str | None = None) -> None:
+    """Append a phrase no command matched, to find missing aliases later."""
+    path = path or UNRECOGNIZED_LOG
+    try:
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now():%Y-%m-%d %H:%M:%S}\t{lang}\t{text}\n")
+    except OSError:
+        pass   # logging must never break the assistant
+
+
+def beep() -> None:
+    winsound.Beep(880, 80)   # blocks only 80 ms, unlike a spoken "Yes?"
+
+
 def main() -> None:
     cfg = load_config()
-    ui.banner(wake=WAKE_NAME)
+    ui.banner(wake=WAKE_NAME, model=cfg.get("stt", {}).get("model", "large-v3-turbo"))
     resolve_all(cfg, ui.console)
 
     with ui.console.status("[cyan]Loading models...", spinner="dots"):
-        stt = WhisperSTT(model_size="small", device="cpu", compute_type="int8")
+        stt = build_stt(cfg)
         listener = VoiceListener(wake_model=WAKE_MODEL)
         speaker = build_speaker(cfg)
-    ui.console.print("[bold green]✔ Ready[/]")
+    ui.console.print(f"[bold green]✔ Ready[/] [dim]stt: {stt.description}[/]")
 
     def on_wake() -> None:
         ui.listening()
-        if speaker:
+        # wake_reply: "beep" (default, fastest), "voice" (says "Yes?") or "none"
+        mode = cfg.get("wake_reply", "beep")
+        if mode == "voice" and speaker:
             speaker.say("Yes?")
+        elif mode == "beep":
+            beep()
 
     def say(text: str, ok: bool = True) -> None:
         ui.reply(text, ok)
@@ -81,9 +119,10 @@ def main() -> None:
 
                 reply = route(text, cfg)
                 if reply is None:
+                    log_unrecognized(text, lang)
                     say("Sorry, I didn't get that", ok=False)
-                elif reply == OK or (reply in SILENT_REPLIES
-                                     and not cfg.get("speak_media")):
+                elif (reply == OK or reply.startswith(CONSOLE_ONLY)
+                      or (reply in SILENT_REPLIES and not cfg.get("speak_media"))):
                     ui.reply(reply)          # console only
                 else:
                     say(reply)

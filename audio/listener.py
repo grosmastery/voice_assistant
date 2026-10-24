@@ -20,7 +20,7 @@ class VoiceListener:
         wake_model: str = "alexa",
         threshold: float = 0.5,
         vad_level: int = 2,
-        silence_sec: float = 0.7,
+        silence_sec: float = 0.5,     # pause that ends a phrase
         no_speech_sec: float = 4.0,
         max_sec: float = 10.0,
     ) -> None:

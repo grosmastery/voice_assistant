@@ -1,1 +1,1 @@
-from . import apps, closer, media, system  # noqa: F401
+from . import apps, closer, dictation, media, spotify, system  # noqa: F401

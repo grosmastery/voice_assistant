@@ -128,6 +128,7 @@ def test_money_formatting():
     ("convert 100 dollars to hryvnia", "100 dollars is 4,000 hryvnias"),
     ("how many hryvnias is a hundred dollars", "100 dollars is 4,000 hryvnias"),
     ("скільки гривень 1 000 доларів", "1,000 dollars is 40,000 hryvnias"),
+    ("How much is $100 in hryvnias?", "100 dollars is 4,000 hryvnias"),
     ("5000 гривень в доларах", "5,000 hryvnias is 125 dollars"),
     ("скільки доларів 100.50 гривень", "100.50 hryvnias is 2.51 dollars"),
     ("how much is one dollar", "1 dollar is 40 hryvnias"),

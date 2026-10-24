@@ -25,6 +25,8 @@ def make_stt(probs, segments):
     stt = WhisperSTT.__new__(WhisperSTT)
     stt.model = FakeModel(probs, segments)
     stt.prompt = "PROMPT"
+    stt.beam_size = 5
+    stt.vad_filter = False
     return stt
 
 
@@ -84,5 +86,57 @@ def test_too_short_audio_returns_empty():
 
 def test_prompt_built_from_app_names(monkeypatch):
     monkeypatch.setattr(whisper_engine, "WhisperModel", lambda *a, **k: object())
-    assert WhisperSTT(app_names=["Foo", "Bar"]).prompt.endswith("Foo Bar")
-    assert "Warcraft" in WhisperSTT().prompt
+    assert WhisperSTT(device="cpu", app_names=["Foo", "Bar"]).prompt.endswith("Foo Bar")
+    assert "Warcraft" in WhisperSTT(device="cpu").prompt
+
+
+def test_beam_and_vad_are_passed():
+    stt = make_stt([("en", 0.9)], [seg("x")])
+    stt.beam_size, stt.vad_filter = 2, True
+    stt.transcribe(AUDIO)
+    assert stt.model.kwargs["beam_size"] == 2 and stt.model.kwargs["vad_filter"] is True
+
+
+# ---- model loading / GPU fallback ----
+class LoadSpy:
+    """Fake WhisperModel that records how it was created."""
+    created: list = []
+    fail_on_cuda = False
+
+    def __init__(self, size, device, compute_type):
+        LoadSpy.created.append((size, device, compute_type))
+        self.device = device
+
+    def transcribe(self, audio, **kwargs):
+        if self.device == "cuda" and LoadSpy.fail_on_cuda:
+            raise RuntimeError("cudnn_ops64_9.dll not found")
+        return iter([]), None
+
+
+def load(monkeypatch, gpus, fail=False, **kw):
+    LoadSpy.created, LoadSpy.fail_on_cuda = [], fail
+    monkeypatch.setattr(whisper_engine, "WhisperModel", LoadSpy)
+    monkeypatch.setattr(whisper_engine.ctranslate2, "get_cuda_device_count", lambda: gpus)
+    return WhisperSTT(**kw)
+
+
+def test_gpu_used_when_available(monkeypatch):
+    stt = load(monkeypatch, gpus=1)
+    assert LoadSpy.created == [("large-v3-turbo", "cuda", "float16")]
+    assert stt.description == "large-v3-turbo · cuda float16"
+
+
+def test_falls_back_to_cpu_when_gpu_fails(monkeypatch):
+    stt = load(monkeypatch, gpus=1, fail=True)
+    assert LoadSpy.created[-1] == ("small", "cpu", "int8")
+    assert stt.model.device == "cpu" and "cpu" in stt.description
+
+
+def test_cpu_when_no_gpu(monkeypatch):
+    load(monkeypatch, gpus=0, cpu_model="base")
+    assert LoadSpy.created == [("base", "cpu", "int8")]
+
+
+def test_cpu_forced(monkeypatch):
+    load(monkeypatch, gpus=1, device="cpu")
+    assert LoadSpy.created == [("small", "cpu", "int8")]

@@ -19,3 +19,6 @@ models/
 .vscode/
 .idea/
 *.log
+# logs and tokens
+logs/
+.spotify_cache

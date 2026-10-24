@@ -8,3 +8,7 @@ pyyaml
 piper-tts
 rich
 psutil
+spotipy
+# GPU speech recognition (NVIDIA, optional, ~1 GB). Without them STT falls back to CPU
+nvidia-cublas-cu12
+nvidia-cudnn-cu12>=9,<10

@@ -19,6 +19,8 @@ def isolated():
     ("Open, Battle.net!", "open battle.net"),
     ("  Відкрий   Варкрафт. ", "відкрий варкрафт"),
     ("PAUSE the music...", "pause the music"),
+    ("How much is $100 in hryvnias?", "how much is 100 dollars in hryvnias"),
+    ("convert $1,000", "convert 1 000 dollars"),
     ("", ""),
     ("   ", ""),
 ])

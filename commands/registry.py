@@ -34,11 +34,15 @@ def command(*phrases: str) -> Callable[[FixedHandler], FixedHandler]:
     return deco
 
 
-def with_target(*verbs: str) -> Callable[[FixedHandler], FixedHandler]:
-    """Register a handler fn(cfg, rest) for "<verb> <rest>" commands."""
+def with_target(*verbs: str, raw: bool = False) -> Callable[[FixedHandler], FixedHandler]:
+    """Register a handler fn(cfg, rest) for "<verb> <rest>" commands.
+
+    raw=True: rest keeps the original case and punctuation (for dictation).
+    """
     normalized = tuple(_norm(v) for v in verbs)
 
     def deco(fn: FixedHandler) -> FixedHandler:
+        fn.wants_raw = raw
         _warn_duplicates(normalized, PREFIX)
         PREFIX.append((normalized, fn))
         return fn
